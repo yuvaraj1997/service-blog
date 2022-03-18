@@ -14,7 +14,7 @@ import java.util.Date;
 
 @Entity
 @Table(name = "customer_tab")
-@Access(value=AccessType.FIELD)
+@Access(value = AccessType.FIELD)
 @Getter
 @Setter
 @AllArgsConstructor
@@ -22,8 +22,8 @@ import java.util.Date;
 public class CustomerEntity implements Serializable {
 
     @Id
-    @GeneratedValue(generator="system-uuid")
-    @GenericGenerator(name="system-uuid", strategy = "uuid2")
+    @GeneratedValue(generator = "system-uuid")
+    @GenericGenerator(name = "system-uuid", strategy = "uuid2")
     @Column(name = "ct_id", nullable = false)
     private String id;
 
@@ -88,9 +88,6 @@ public class CustomerEntity implements Serializable {
     @Getter
     @AllArgsConstructor
     public enum Status {
-        INITIATED("INITIATED"),
-        SUBMITTED("SUBMITTED"),
-        CONFIRMED("CONFIRMED"),
         VERIFICATION_PENDING("VERIFICATION_PENDING"),
         SUCCESS("SUCCESS");
 

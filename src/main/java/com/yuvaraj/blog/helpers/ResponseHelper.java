@@ -22,16 +22,16 @@ public class ResponseHelper {
     public static Object handleGeneralException(Integer statusCode, ErrorCode errorCode) {
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("status", getStatusNodeMapping(statusCode));
-        if(null != errorCode){
+        if (null != errorCode) {
             response.put("error", getErrorNodeMapping(errorCode));
         }
         return response;
     }
 
-    public static Map<String, Object> handleMethodArgumentNotValidException(Integer statusCode, ErrorCode errorCode, MethodArgumentNotValidException ex){
+    public static Map<String, Object> handleMethodArgumentNotValidException(Integer statusCode, ErrorCode errorCode, MethodArgumentNotValidException ex) {
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("status", getStatusNodeMapping(statusCode));
-        if(null != errorCode){
+        if (null != errorCode) {
             response.put("error", getErrorNodeMapping(errorCode));
         }
         Map<String, Object> additionalProperties = new HashMap<>();
@@ -61,7 +61,7 @@ public class ResponseHelper {
     public static ResponseEntity badAsJson(ErrorCode errorCode) {
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("status", getStatusNodeMapping(HttpStatus.BAD_REQUEST.value()));
-        if(null != errorCode){
+        if (null != errorCode) {
             response.put("error", getErrorNodeMapping(errorCode));
         }
         return ResponseEntity.status(HttpStatus.BAD_REQUEST.value()).body(response);

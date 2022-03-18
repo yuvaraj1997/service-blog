@@ -12,13 +12,13 @@ import org.springframework.context.annotation.Bean;
 @Slf4j
 public class BlogApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(BlogApplication.class, args);
-	}
+    public static void main(String[] args) {
+        SpringApplication.run(BlogApplication.class, args);
+    }
 
-	@Bean
-	CommandLineRunner run(AuthorityRepository authorityRepository, CustomerRepository customerRepository){
-		return args -> {
+    @Bean
+    CommandLineRunner run(AuthorityRepository authorityRepository, CustomerRepository customerRepository) {
+        return args -> {
 //			authorityRepository.save(new AuthorityEntity(null, "test", "test", null, null));
 //			authorityRepository.save(new AuthorityEntity(null, "Customer", "ROLE_CUSTOMER", null, null));
 //			authorityRepository.save(new AuthorityEntity(null, "Merchant", "ROLE_MERCHANT", null, null));
@@ -34,7 +34,7 @@ public class BlogApplication {
 //					CustomerEntity.SubType.NA.getSubType(),
 //					Arrays.asList(CustomerEntity.Status.INITIATED.getStatus())
 //			);
-		};
-	}
+        };
+    }
 
 }

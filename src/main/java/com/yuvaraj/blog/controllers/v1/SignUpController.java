@@ -2,8 +2,8 @@ package com.yuvaraj.blog.controllers.v1;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yuvaraj.blog.exceptions.signup.CustomerAlreadyExistException;
-import com.yuvaraj.blog.models.controllers.v1.signup.PostSignUpRequest;
-import com.yuvaraj.blog.models.controllers.v1.signup.PostSignUpResponse;
+import com.yuvaraj.blog.models.controllers.v1.signup.postSignUp.PostSignUpRequest;
+import com.yuvaraj.blog.models.controllers.v1.signup.postSignUp.PostSignUpResponse;
 import com.yuvaraj.blog.services.SignUpService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +29,7 @@ public class SignUpController {
 
     @PostMapping(path = "", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity postSignUp(@Valid @RequestBody PostSignUpRequest postSignUpRequest, HttpServletRequest httpServletRequest) throws CustomerAlreadyExistException {
+        //todo: remove logging password
         String logMessage = String.format("%s %s", httpServletRequest.getMethod(), httpServletRequest.getRequestURI());
         log.info("Initiate to process {}, request={}", logMessage, new ObjectMapper().valueToTree(postSignUpRequest));
         PostSignUpResponse postSignUpResponse = signUpService.processPostSignUp(postSignUpRequest);

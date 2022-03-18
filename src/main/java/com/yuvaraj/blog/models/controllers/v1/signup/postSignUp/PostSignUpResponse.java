@@ -1,4 +1,4 @@
-package com.yuvaraj.blog.models.controllers.v1.signup;
+package com.yuvaraj.blog.models.controllers.v1.signup.postSignUp;
 
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;

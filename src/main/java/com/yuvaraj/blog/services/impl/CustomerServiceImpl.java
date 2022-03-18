@@ -16,26 +16,26 @@ import java.util.List;
 @AllArgsConstructor
 public class CustomerServiceImpl implements CustomerService {
 
-   private final CustomerRepository customerRepository;
+    private final CustomerRepository customerRepository;
 
 
-   @Override
-   public CustomerEntity save(CustomerEntity customerEntity) {
-      return customerRepository.save(customerEntity);
-   }
+    @Override
+    public CustomerEntity save(CustomerEntity customerEntity) {
+        return customerRepository.save(customerEntity);
+    }
 
-   @Override
-   public CustomerEntity update(CustomerEntity customerEntity) {
-      return customerRepository.saveAndFlush(customerEntity);
-   }
+    @Override
+    public CustomerEntity update(CustomerEntity customerEntity) {
+        return customerRepository.saveAndFlush(customerEntity);
+    }
 
-   @Override
-   public CustomerEntity findById(String id) {
-      return customerRepository.findById(id).orElse(null);
-   }
+    @Override
+    public CustomerEntity findById(String id) {
+        return customerRepository.findById(id).orElse(null);
+    }
 
-   @Override
-   public CustomerEntity findByEmailTypeSubtypeAndStatuses(String email, String type, String subtype, List<String> status) {
-      return customerRepository.findByEmailTypeSubtypeAndStatuses(email, type, subtype, status);
-   }
+    @Override
+    public CustomerEntity findByEmailTypeSubtypeAndStatuses(String email, String type, String subtype, List<String> status) {
+        return customerRepository.findByEmailTypeSubtypeAndStatuses(email, type, subtype, status);
+    }
 }
