@@ -2,12 +2,15 @@ package com.yuvaraj.blog.controllers.v1;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yuvaraj.blog.exceptions.CustomerNotFoundException;
+import com.yuvaraj.blog.exceptions.InvalidArgumentException;
 import com.yuvaraj.blog.exceptions.signup.CustomerAlreadyExistException;
+import com.yuvaraj.blog.exceptions.verification.VerificationCodeExpiredException;
 import com.yuvaraj.blog.exceptions.verification.VerificationCodeMaxLimitReachedException;
 import com.yuvaraj.blog.exceptions.verification.VerificationCodeResendNotAllowedException;
 import com.yuvaraj.blog.models.controllers.v1.signup.postResendVerification.PostResendVerificationRequest;
 import com.yuvaraj.blog.models.controllers.v1.signup.postSignUp.PostSignUpRequest;
 import com.yuvaraj.blog.models.controllers.v1.signup.postSignUp.PostSignUpResponse;
+import com.yuvaraj.blog.models.controllers.v1.signup.postVerify.PostVerifyRequest;
 import com.yuvaraj.blog.services.SignUpService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,6 +53,15 @@ public class SignUpController {
         log.info("Initiate to process {}, request={}", logMessage, new ObjectMapper().valueToTree(postResendVerificationRequest));
         signUpService.processPostResendVerification(postResendVerificationRequest);
         log.info("Successfully processed {}, request={}", logMessage, new ObjectMapper().valueToTree(postResendVerificationRequest));
+        return okAsJson();
+    }
+
+    @PostMapping(path = "verify", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity postVerify(@Valid @RequestBody PostVerifyRequest postVerifyRequest, HttpServletRequest httpServletRequest) throws CustomerAlreadyExistException, VerificationCodeMaxLimitReachedException, CustomerNotFoundException, VerificationCodeResendNotAllowedException, InvalidArgumentException, VerificationCodeExpiredException {
+        String logMessage = String.format("%s %s", httpServletRequest.getMethod(), httpServletRequest.getRequestURI());
+        log.info("Initiate to process {}, request={}", logMessage, new ObjectMapper().valueToTree(postVerifyRequest));
+        signUpService.processPostVerify(postVerifyRequest);
+        log.info("Successfully processed {}, request={}", logMessage, new ObjectMapper().valueToTree(postVerifyRequest));
         return okAsJson();
     }
 }

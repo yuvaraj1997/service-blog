@@ -1,7 +1,9 @@
 package com.yuvaraj.blog.configuration;
 
 import com.yuvaraj.blog.exceptions.CustomerNotFoundException;
+import com.yuvaraj.blog.exceptions.InvalidArgumentException;
 import com.yuvaraj.blog.exceptions.signup.CustomerAlreadyExistException;
+import com.yuvaraj.blog.exceptions.verification.VerificationCodeExpiredException;
 import com.yuvaraj.blog.exceptions.verification.VerificationCodeMaxLimitReachedException;
 import com.yuvaraj.blog.exceptions.verification.VerificationCodeResendNotAllowedException;
 import com.yuvaraj.blog.helpers.ErrorCode;
@@ -62,6 +64,18 @@ public class ExceptionHandlerConfiguration extends ResponseEntityExceptionHandle
     public ResponseEntity<Object> verificationCodeMaxLimitReachedExceptionException(VerificationCodeResendNotAllowedException verificationCodeResendNotAllowedException, WebRequest request) {
         HttpHeaders headers = new HttpHeaders();
         return handleExceptionInternal(verificationCodeResendNotAllowedException, handleGeneralException(HttpStatus.BAD_REQUEST.value(), verificationCodeResendNotAllowedException.getErrorCode()), headers, HttpStatus.BAD_REQUEST, request);
+    }
+
+    @ExceptionHandler({InvalidArgumentException.class})
+    public ResponseEntity<Object> invalidArgumentException(InvalidArgumentException invalidArgumentException, WebRequest request) {
+        HttpHeaders headers = new HttpHeaders();
+        return handleExceptionInternal(invalidArgumentException, handleGeneralException(HttpStatus.BAD_REQUEST.value(), invalidArgumentException.getErrorCode()), headers, HttpStatus.BAD_REQUEST, request);
+    }
+
+    @ExceptionHandler({VerificationCodeExpiredException.class})
+    public ResponseEntity<Object> verificationCodeExpiredException(VerificationCodeExpiredException verificationCodeExpiredException, WebRequest request) {
+        HttpHeaders headers = new HttpHeaders();
+        return handleExceptionInternal(verificationCodeExpiredException, handleGeneralException(HttpStatus.BAD_REQUEST.value(), verificationCodeExpiredException.getErrorCode()), headers, HttpStatus.BAD_REQUEST, request);
     }
 
 

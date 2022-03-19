@@ -117,7 +117,7 @@ public class VerificationCodeEntity implements Serializable {
     public enum Status {
         PENDING("PENDING"),
         USER_REQUESTED_AGAIN("USER_REQUESTED_AGAIN"),
-        SUCCESS("SUCCESS"),
+        VERIFIED("VERIFIED"),
         EXPIRED("EXPIRED");
 
         private final String status;

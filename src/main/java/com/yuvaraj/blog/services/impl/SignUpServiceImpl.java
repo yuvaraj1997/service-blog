@@ -1,15 +1,19 @@
 package com.yuvaraj.blog.services.impl;
 
 import com.yuvaraj.blog.exceptions.CustomerNotFoundException;
+import com.yuvaraj.blog.exceptions.InvalidArgumentException;
 import com.yuvaraj.blog.exceptions.signup.CustomerAlreadyExistException;
+import com.yuvaraj.blog.exceptions.verification.VerificationCodeExpiredException;
 import com.yuvaraj.blog.exceptions.verification.VerificationCodeMaxLimitReachedException;
 import com.yuvaraj.blog.exceptions.verification.VerificationCodeResendNotAllowedException;
 import com.yuvaraj.blog.helpers.ErrorCode;
 import com.yuvaraj.blog.models.controllers.v1.signup.postResendVerification.PostResendVerificationRequest;
 import com.yuvaraj.blog.models.controllers.v1.signup.postSignUp.PostSignUpRequest;
 import com.yuvaraj.blog.models.controllers.v1.signup.postSignUp.PostSignUpResponse;
+import com.yuvaraj.blog.models.controllers.v1.signup.postVerify.PostVerifyRequest;
 import com.yuvaraj.blog.models.db.AuthorityEntity;
 import com.yuvaraj.blog.models.db.CustomerEntity;
+import com.yuvaraj.blog.models.db.VerificationCodeEntity;
 import com.yuvaraj.blog.services.*;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +24,7 @@ import javax.transaction.Transactional;
 import java.util.List;
 
 import static com.yuvaraj.blog.helpers.DateHelper.convertDateForEndResult;
+import static com.yuvaraj.blog.helpers.DateHelper.nowDate;
 
 @Service
 @Slf4j
@@ -48,6 +53,7 @@ public class SignUpServiceImpl implements SignUpService {
     }
 
     @Override
+    @Transactional(rollbackOn = Exception.class)
     public void processPostResendVerification(PostResendVerificationRequest postResendVerificationRequest) throws CustomerAlreadyExistException, CustomerNotFoundException, VerificationCodeMaxLimitReachedException, VerificationCodeResendNotAllowedException {
         checkIfUserAlreadyExist(postResendVerificationRequest.getEmailAddress());
         CustomerEntity customerEntity = getAnyExistingRecordIfAvailable(postResendVerificationRequest.getEmailAddress());
@@ -56,6 +62,26 @@ public class SignUpServiceImpl implements SignUpService {
             throw new CustomerNotFoundException("customer not found to resend verification", ErrorCode.CUSTOMER_NOT_FOUND);
         }
         verificationCodeService.sendSignUpActivation(customerEntity.getId());
+    }
+
+    @Override
+    @Transactional(rollbackOn = Exception.class)
+    public void processPostVerify(PostVerifyRequest postVerifyRequest) throws InvalidArgumentException, VerificationCodeExpiredException {
+        verificationCodeService.isVerificationIdIsValidToProceedVerification(postVerifyRequest.getId());
+        VerificationCodeEntity verificationCodeEntity = verificationCodeService.findById(postVerifyRequest.getId());
+        CustomerEntity customerEntity = customerService.findById(verificationCodeEntity.getIdentifier());
+        if (null == customerEntity) {
+            log.error("[{}]: Customer Not Found.", postVerifyRequest.getId());
+            throw new InvalidArgumentException("Customer Not Found", ErrorCode.INVALID_ARGUMENT);
+        }
+        if (!customerEntity.getStatus().equals(CustomerEntity.Status.VERIFICATION_PENDING.getStatus())) {
+            log.error("[{}]: Customer status is not satisfy to verify. customerId={}, status={}", postVerifyRequest.getId(), customerEntity.getId(), customerEntity.getStatus());
+            throw new InvalidArgumentException("Customer status is not satisfy to verify", ErrorCode.INVALID_ARGUMENT);
+        }
+        verificationCodeService.markAsVerified(postVerifyRequest.getId());
+        customerEntity.setStatus(CustomerEntity.Status.SUCCESS.getStatus());
+        customerEntity.setCustomerCreatedDate(nowDate());
+        customerService.update(customerEntity);
     }
 
     private CustomerEntity createCustomerRecord(PostSignUpRequest postSignUpRequest) {

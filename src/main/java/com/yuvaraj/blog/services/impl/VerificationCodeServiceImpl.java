@@ -1,6 +1,7 @@
 package com.yuvaraj.blog.services.impl;
 
 import com.google.common.base.Preconditions;
+import com.yuvaraj.blog.exceptions.InvalidArgumentException;
 import com.yuvaraj.blog.exceptions.verification.VerificationCodeExpiredException;
 import com.yuvaraj.blog.exceptions.verification.VerificationCodeMaxLimitReachedException;
 import com.yuvaraj.blog.exceptions.verification.VerificationCodeResendNotAllowedException;
@@ -16,7 +17,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import javax.transaction.Transactional;
+import java.util.Arrays;
 
+import static com.yuvaraj.blog.helpers.DateHelper.nowDate;
 import static com.yuvaraj.blog.helpers.DateHelper.nowDateAddMinutes;
 
 @Service
@@ -57,6 +60,47 @@ public class VerificationCodeServiceImpl implements VerificationCodeService {
         verificationCodeEntity.setStatus(VerificationCodeEntity.Status.PENDING.getStatus());
         verificationCodeEntity = save(verificationCodeEntity);
         log.info("[{}]: Successfully send sign up activation. identifier={}, verificationCodeId={}", identifier, identifier, verificationCodeEntity.getId());
+    }
+
+    @Override
+    public VerificationCodeEntity findById(String id) {
+        return verificationCodeRepository.findById(id).orElse(null);
+    }
+
+    @Override
+    public void isVerificationIdIsValidToProceedVerification(String id) throws InvalidArgumentException, VerificationCodeExpiredException {
+        VerificationCodeEntity verificationCodeEntity = findById(id);
+        if (null == verificationCodeEntity) {
+            log.info("[{}]: Invalid verification code id {} not found.", id, id);
+            throw new InvalidArgumentException("Invalid verification code id", ErrorCode.INVALID_ARGUMENT);
+        }
+        if (!Arrays.asList(VerificationCodeEntity.Status.PENDING.getStatus(), VerificationCodeEntity.Status.USER_REQUESTED_AGAIN.getStatus()).contains(verificationCodeEntity.getStatus())) {
+            log.info("[{}]: Verification code is not satisfy id {} status={}.", id, id, verificationCodeEntity.getStatus());
+            throw new InvalidArgumentException("Invalid verification code id", ErrorCode.INVALID_ARGUMENT);
+        }
+        if (verificationCodeEntity.isExpired()) {
+            log.info("[{}]: Verification code already expired id={} so we updating db to change status.", id, id);
+            verificationCodeEntity.setStatus(VerificationCodeEntity.Status.EXPIRED.getStatus());
+            update(verificationCodeEntity);
+            log.info("[{}]: Verification already expired will ask user to request again. identifier={}", verificationCodeEntity.getIdentifier(), verificationCodeEntity.getIdentifier());
+            throw new VerificationCodeExpiredException("Verification already expired will ask user to request again", ErrorCode.VERIFICATION_CODE_ALREADY_EXPIRED);
+        }
+    }
+
+    @Override
+    public void markAsVerified(String id) throws InvalidArgumentException {
+        VerificationCodeEntity verificationCodeEntity = findById(id);
+        if (null == verificationCodeEntity) {
+            log.info("[{}]: Invalid verification code id {} not found.", id, id);
+            throw new InvalidArgumentException("Invalid verification code id", ErrorCode.INVALID_ARGUMENT);
+        }
+        if (!Arrays.asList(VerificationCodeEntity.Status.PENDING.getStatus(), VerificationCodeEntity.Status.USER_REQUESTED_AGAIN.getStatus()).contains(verificationCodeEntity.getStatus())) {
+            log.info("[{}]: Verification code is not satisfy id {} status={}.", id, id, verificationCodeEntity.getStatus());
+            throw new InvalidArgumentException("Invalid verification code id", ErrorCode.INVALID_ARGUMENT);
+        }
+        verificationCodeEntity.setStatus(VerificationCodeEntity.Status.VERIFIED.getStatus());
+        verificationCodeEntity.setVerifiedDate(nowDate());
+        update(verificationCodeEntity);
     }
 
     private VerificationCodeEntity save(VerificationCodeEntity verificationCodeEntity) {
