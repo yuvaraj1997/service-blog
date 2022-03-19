@@ -2,6 +2,8 @@ package com.yuvaraj.blog.configuration;
 
 import com.yuvaraj.blog.exceptions.CustomerNotFoundException;
 import com.yuvaraj.blog.exceptions.signup.CustomerAlreadyExistException;
+import com.yuvaraj.blog.exceptions.verification.VerificationCodeMaxLimitReachedException;
+import com.yuvaraj.blog.exceptions.verification.VerificationCodeResendNotAllowedException;
 import com.yuvaraj.blog.helpers.ErrorCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
@@ -48,6 +50,18 @@ public class ExceptionHandlerConfiguration extends ResponseEntityExceptionHandle
     public ResponseEntity<Object> customerAlreadyExistException(CustomerAlreadyExistException customerAlreadyExistException, WebRequest request) {
         HttpHeaders headers = new HttpHeaders();
         return handleExceptionInternal(customerAlreadyExistException, handleGeneralException(HttpStatus.BAD_REQUEST.value(), customerAlreadyExistException.getErrorCode()), headers, HttpStatus.BAD_REQUEST, request);
+    }
+
+    @ExceptionHandler({VerificationCodeMaxLimitReachedException.class})
+    public ResponseEntity<Object> verificationCodeMaxLimitReachedExceptionException(VerificationCodeMaxLimitReachedException verificationCodeMaxLimitReachedException, WebRequest request) {
+        HttpHeaders headers = new HttpHeaders();
+        return handleExceptionInternal(verificationCodeMaxLimitReachedException, handleGeneralException(HttpStatus.BAD_REQUEST.value(), verificationCodeMaxLimitReachedException.getErrorCode()), headers, HttpStatus.BAD_REQUEST, request);
+    }
+
+    @ExceptionHandler({VerificationCodeResendNotAllowedException.class})
+    public ResponseEntity<Object> verificationCodeMaxLimitReachedExceptionException(VerificationCodeResendNotAllowedException verificationCodeResendNotAllowedException, WebRequest request) {
+        HttpHeaders headers = new HttpHeaders();
+        return handleExceptionInternal(verificationCodeResendNotAllowedException, handleGeneralException(HttpStatus.BAD_REQUEST.value(), verificationCodeResendNotAllowedException.getErrorCode()), headers, HttpStatus.BAD_REQUEST, request);
     }
 
 

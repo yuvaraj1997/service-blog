@@ -70,4 +70,8 @@ public class ResponseHelper {
     public static ResponseEntity ok(Object object) {
         return ResponseEntity.status(HttpStatus.OK.value()).body(object);
     }
+
+    public static ResponseEntity okAsJson() {
+        return ResponseEntity.status(HttpStatus.OK.value()).body(getStatusNodeMapping(HttpStatus.OK.value()));
+    }
 }

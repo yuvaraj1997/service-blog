@@ -16,6 +16,9 @@ public class PostSignUpResponse {
     @JsonProperty("customerId")
     private String customerId;
 
+    @JsonProperty("status")
+    private String status;
+
     @JsonProperty("dateCreated")
     private String dateCreated;
 

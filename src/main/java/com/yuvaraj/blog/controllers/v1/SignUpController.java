@@ -1,7 +1,11 @@
 package com.yuvaraj.blog.controllers.v1;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.yuvaraj.blog.exceptions.CustomerNotFoundException;
 import com.yuvaraj.blog.exceptions.signup.CustomerAlreadyExistException;
+import com.yuvaraj.blog.exceptions.verification.VerificationCodeMaxLimitReachedException;
+import com.yuvaraj.blog.exceptions.verification.VerificationCodeResendNotAllowedException;
+import com.yuvaraj.blog.models.controllers.v1.signup.postResendVerification.PostResendVerificationRequest;
 import com.yuvaraj.blog.models.controllers.v1.signup.postSignUp.PostSignUpRequest;
 import com.yuvaraj.blog.models.controllers.v1.signup.postSignUp.PostSignUpResponse;
 import com.yuvaraj.blog.services.SignUpService;
@@ -18,6 +22,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
 
 import static com.yuvaraj.blog.helpers.ResponseHelper.ok;
+import static com.yuvaraj.blog.helpers.ResponseHelper.okAsJson;
 
 @RestController
 @RequestMapping(path = "v1/signup")
@@ -28,7 +33,7 @@ public class SignUpController {
     SignUpService signUpService;
 
     @PostMapping(path = "", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity postSignUp(@Valid @RequestBody PostSignUpRequest postSignUpRequest, HttpServletRequest httpServletRequest) throws CustomerAlreadyExistException {
+    public ResponseEntity postSignUp(@Valid @RequestBody PostSignUpRequest postSignUpRequest, HttpServletRequest httpServletRequest) throws CustomerAlreadyExistException, VerificationCodeMaxLimitReachedException, VerificationCodeResendNotAllowedException {
         //todo: remove logging password
         String logMessage = String.format("%s %s", httpServletRequest.getMethod(), httpServletRequest.getRequestURI());
         log.info("Initiate to process {}, request={}", logMessage, new ObjectMapper().valueToTree(postSignUpRequest));
@@ -36,5 +41,15 @@ public class SignUpController {
         log.info("Successfully processed {}, request={}, response={}", logMessage, new ObjectMapper().valueToTree(postSignUpRequest)
                 , new ObjectMapper().valueToTree(postSignUpResponse));
         return ok(postSignUpResponse);
+    }
+
+
+    @PostMapping(path = "resend/verification", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity postResendVerification(@Valid @RequestBody PostResendVerificationRequest postResendVerificationRequest, HttpServletRequest httpServletRequest) throws CustomerAlreadyExistException, VerificationCodeMaxLimitReachedException, CustomerNotFoundException, VerificationCodeResendNotAllowedException {
+        String logMessage = String.format("%s %s", httpServletRequest.getMethod(), httpServletRequest.getRequestURI());
+        log.info("Initiate to process {}, request={}", logMessage, new ObjectMapper().valueToTree(postResendVerificationRequest));
+        signUpService.processPostResendVerification(postResendVerificationRequest);
+        log.info("Successfully processed {}, request={}", logMessage, new ObjectMapper().valueToTree(postResendVerificationRequest));
+        return okAsJson();
     }
 }

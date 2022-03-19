@@ -12,7 +12,7 @@ import javax.persistence.*;
 import java.io.Serializable;
 import java.util.Date;
 
-@Entity
+@Entity(name = "CustomerEntity")
 @Table(name = "customer_tab")
 @Access(value = AccessType.FIELD)
 @Getter
@@ -52,7 +52,7 @@ public class CustomerEntity implements Serializable {
     private Date merchantCreatedDate;
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "ct_authority_id")
+    @JoinColumn(name = "ct_authority_id", referencedColumnName = "at_id")
     private AuthorityEntity authorityEntity;
 
     @Column(name = "ct_status")
