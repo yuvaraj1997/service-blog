@@ -1,4 +1,4 @@
-package com.yuvaraj.blog.models.controllers.v1.signup.postVerify;
+package com.yuvaraj.blog.models.controllers.v1.forgotPassword.postForgotPassword;
 
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -7,19 +7,17 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.Setter;
 
+import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)
 @Getter
 @Setter
-public class PostVerifyRequest {
+public class PostForgotPasswordRequest {
 
-    @JsonProperty("id")
-    @NotBlank(message = "id is mandatory")
-    private String id;
-
-    @JsonProperty("customerId")
-    @NotBlank(message = "customerId is mandatory")
-    private String customerId;
+    @JsonProperty("emailAddress")
+    @NotBlank(message = "Email address is mandatory")
+    @Email(message = "Email address should be valid")
+    private String emailAddress;
 }

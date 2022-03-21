@@ -13,8 +13,9 @@ public interface VerificationCodeService {
 
     /**
      * @param identifier String request
+     * @param type       VerificationCodeEntity.Type request
      */
-    void sendSignUpActivation(String identifier) throws VerificationCodeMaxLimitReachedException, VerificationCodeResendNotAllowedException;
+    void sendVerification(String identifier, VerificationCodeEntity.Type type) throws VerificationCodeMaxLimitReachedException, VerificationCodeResendNotAllowedException;
 
     /**
      * @param id String request
@@ -22,9 +23,11 @@ public interface VerificationCodeService {
     VerificationCodeEntity findById(String id);
 
     /**
-     * @param id String request
+     * @param id         String request
+     * @param identifier String request
+     * @param type       VerificationCodeEntity.Type request
      */
-    void isVerificationIdIsValidToProceedVerification(String id) throws InvalidArgumentException, VerificationCodeExpiredException;
+    void isVerificationIdIsValidToProceedVerification(String id, String identifier, VerificationCodeEntity.Type type) throws InvalidArgumentException, VerificationCodeExpiredException;
 
     /**
      * @param id String request

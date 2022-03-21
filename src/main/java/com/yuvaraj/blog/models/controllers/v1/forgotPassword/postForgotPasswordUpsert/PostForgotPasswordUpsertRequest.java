@@ -1,4 +1,4 @@
-package com.yuvaraj.blog.models.controllers.v1.signup.postVerify;
+package com.yuvaraj.blog.models.controllers.v1.forgotPassword.postForgotPasswordUpsert;
 
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -13,13 +13,18 @@ import javax.validation.constraints.NotBlank;
 @JsonIgnoreProperties(ignoreUnknown = true)
 @Getter
 @Setter
-public class PostVerifyRequest {
+public class PostForgotPasswordUpsertRequest {
 
-    @JsonProperty("id")
-    @NotBlank(message = "id is mandatory")
-    private String id;
+    @JsonProperty("token")
+    @NotBlank(message = "token is mandatory")
+    private String token;
 
     @JsonProperty("customerId")
     @NotBlank(message = "customerId is mandatory")
     private String customerId;
+
+    @JsonProperty("password")
+    @NotBlank(message = "password is mandatory")
+    //TODO: Password strength
+    private String password;
 }

@@ -25,11 +25,6 @@ import static com.yuvaraj.blog.helpers.DateHelper.*;
 @Slf4j
 public class VerificationCodeEntity implements Serializable {
 
-    //TODO; Environemtn variables
-    public static final int MAX_RETRIES = 3;
-    public static final int RESEND_REQUEST_AFTER_CERTAIN_MINUTES = 3;
-    public static final int REQUEST_UNLOCK_IN_MINUTES = 4;
-
     @Id
     @GeneratedValue(generator = "system-uuid")
     @GenericGenerator(name = "system-uuid", strategy = "uuid2")
@@ -67,13 +62,21 @@ public class VerificationCodeEntity implements Serializable {
     @Column(name = "vct_record_update_date")
     private Date updatedDate;
 
+    //Defaylt Value
+    @Transient
+    private int maxRetries = 3;
+    @Transient
+    private int resendRequestAfterCertainSeconds = 3 * 60;
+    @Transient
+    private int requestUnlockInSeconds = 3 * 60;
+
     public boolean isExpired() {
         return new Date().after(expiryDate);
     }
 
     public boolean isMaxReached() {
         int futureResendRetries = this.resendRetries + 1;
-        boolean check = (this.resendRetries + 1) > MAX_RETRIES;
+        boolean check = (this.resendRetries + 1) > this.maxRetries;
         log.info("[{}]: Is Max Reached currentResendRetries={}, futureResendRetries={}, check={}", this.getIdentifier(), this.resendRetries, futureResendRetries, check);
         return check;
     }
@@ -88,7 +91,7 @@ public class VerificationCodeEntity implements Serializable {
 
     public boolean isRequestUnlocked() {
         Date nowDate = nowDate();
-        Date timeToUnlock = dateAddMinutes(this.createdDate, REQUEST_UNLOCK_IN_MINUTES);
+        Date timeToUnlock = dateAddSeconds(this.createdDate, this.requestUnlockInSeconds);
         boolean isRequestUnlocked = nowDate.after(timeToUnlock);
         log.info("[{}]: Still have {} minutes to unlock", this.getIdentifier(), getMinutesLeft(nowDate, timeToUnlock));
         return isRequestUnlocked;
@@ -96,16 +99,27 @@ public class VerificationCodeEntity implements Serializable {
 
     public boolean isItEligibleToResendVerification() {
         Date nowDate = nowDate();
-        Date timeToUnlock = dateAddMinutes(this.createdDate, RESEND_REQUEST_AFTER_CERTAIN_MINUTES);
+        Date timeToUnlock = dateAddSeconds(this.createdDate, resendRequestAfterCertainSeconds);
         boolean isItEligibleToResendVerificationCheck = nowDate.after(timeToUnlock);
         log.info("[{}]: Still have {} minutes to resend", this.getIdentifier(), getMinutesLeft(nowDate, timeToUnlock));
         return isItEligibleToResendVerificationCheck;
     }
 
+    public void initializeVariables(int maxRetries, int resendRequestAfterCertainSeconds, int requestUnlockInSeconds) {
+        this.maxRetries = maxRetries;
+        this.resendRequestAfterCertainSeconds = resendRequestAfterCertainSeconds;
+        this.requestUnlockInSeconds = requestUnlockInSeconds;
+    }
+
+    public Date calculateExpiryDate() {
+        return nowDateAddSeconds(this.resendRequestAfterCertainSeconds);
+    }
+
     @Getter
     @AllArgsConstructor
     public enum Type {
-        SIGN_UP_ACTIVATION("SIGN_UP_ACTIVATION");
+        SIGN_UP_ACTIVATION("SIGN_UP_ACTIVATION"),
+        FORGOT_PASSWORD("FORGOT_PASSWORD");
 
         private final String type;
     }

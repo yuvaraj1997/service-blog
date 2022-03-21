@@ -33,6 +33,11 @@ public class DateHelper {
         return nowDateTime.plusMinutes(minutes).toDate();
     }
 
+    public static Date nowDateAddSeconds(int seconds) {
+        DateTime nowDateTime = nowDateTime();
+        return nowDateTime.plusSeconds(seconds).toDate();
+    }
+
     public static Date dateAddMinutes(Date date, int minutes) {
         DateTime nowDateTime = new DateTime(date.getTime());
         return nowDateTime.plusMinutes(minutes).toDate();
@@ -42,6 +47,11 @@ public class DateHelper {
         DateTime date1DateTime = new DateTime(date1.getTime());
         DateTime date2DateTime = new DateTime(date2.getTime());
         return Minutes.minutesBetween(date1DateTime, date2DateTime).getMinutes();
+    }
+
+    public static Date dateAddSeconds(Date date, int seconds) {
+        DateTime nowDateTime = new DateTime(date.getTime());
+        return nowDateTime.plusSeconds(seconds).toDate();
     }
 
 

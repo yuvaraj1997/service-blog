@@ -48,7 +48,7 @@ public class SignUpServiceImpl implements SignUpService {
         }
         customerEntity = createCustomerRecord(postSignUpRequest);
         passwordService.upsertPassword(passwordEncoder.encode(postSignUpRequest.getPassword()), customerEntity.getId());
-        verificationCodeService.sendSignUpActivation(customerEntity.getId());
+        verificationCodeService.sendVerification(customerEntity.getId(), VerificationCodeEntity.Type.SIGN_UP_ACTIVATION);
         return buildPostSignUpResponse(customerEntity, false);
     }
 
@@ -61,13 +61,13 @@ public class SignUpServiceImpl implements SignUpService {
             log.info("Customer not found to do resend verification emailAddress={}", postResendVerificationRequest.getEmailAddress());
             throw new CustomerNotFoundException("customer not found to resend verification", ErrorCode.CUSTOMER_NOT_FOUND);
         }
-        verificationCodeService.sendSignUpActivation(customerEntity.getId());
+        verificationCodeService.sendVerification(customerEntity.getId(), VerificationCodeEntity.Type.SIGN_UP_ACTIVATION);
     }
 
     @Override
     @Transactional(rollbackOn = Exception.class)
     public void processPostVerify(PostVerifyRequest postVerifyRequest) throws InvalidArgumentException, VerificationCodeExpiredException {
-        verificationCodeService.isVerificationIdIsValidToProceedVerification(postVerifyRequest.getId());
+        verificationCodeService.isVerificationIdIsValidToProceedVerification(postVerifyRequest.getId(), postVerifyRequest.getCustomerId(), VerificationCodeEntity.Type.SIGN_UP_ACTIVATION);
         VerificationCodeEntity verificationCodeEntity = verificationCodeService.findById(postVerifyRequest.getId());
         CustomerEntity customerEntity = customerService.findById(verificationCodeEntity.getIdentifier());
         if (null == customerEntity) {

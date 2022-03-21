@@ -20,7 +20,6 @@ import javax.transaction.Transactional;
 import java.util.Arrays;
 
 import static com.yuvaraj.blog.helpers.DateHelper.nowDate;
-import static com.yuvaraj.blog.helpers.DateHelper.nowDateAddMinutes;
 
 @Service
 @Slf4j
@@ -28,17 +27,31 @@ import static com.yuvaraj.blog.helpers.DateHelper.nowDateAddMinutes;
 @AllArgsConstructor
 public class VerificationCodeServiceImpl implements VerificationCodeService {
 
+
+    //TODO; Environemtn variables
+    public static final int SIGN_UP_ACTIVATION_MAX_RETRIES = 3;
+    public static final int SIGN_UP_ACTIVATION_RESEND_REQUEST_AFTER_CERTAIN_SECONDS = 3 * 60;
+    public static final int SIGN_UP_ACTIVATION_REQUEST_UNLOCK_IN_SECONDS = 4 * 60;
+
+    public static final int FORGOT_PASSWORD_MAX_RETRIES = 3;
+    public static final int FORGOT_PASSWORD_RESEND_REQUEST_AFTER_CERTAIN_SECONDS = 3 * 60;
+    public static final int FORGOT_PASSWORD_REQUEST_UNLOCK_IN_SECONDS = 4 * 60;
+
     private final VerificationCodeRepository verificationCodeRepository;
 
     @Override
-    public void sendSignUpActivation(String identifier) throws VerificationCodeMaxLimitReachedException, VerificationCodeResendNotAllowedException {
+    @Transactional(rollbackOn = Exception.class)
+    public void sendVerification(String identifier, VerificationCodeEntity.Type type) throws VerificationCodeMaxLimitReachedException, VerificationCodeResendNotAllowedException {
+        //TODO: Handle tokenization verification id and send user
         Preconditions.checkNotNull(identifier, "identifier cannot be null");
+        Preconditions.checkNotNull(identifier, "type cannot be null");
         int resendRetriesCount = 1;
-        log.info("[{}]: Initiating send sign up activation. identifier={}", identifier, identifier);
+        log.info("[{}]: Initiating send verification. identifier={}", identifier, identifier);
         VerificationCodeEntity verificationCodeEntity;
-        Page<VerificationCodeEntity> verificationCodeEntityPage = verificationCodeRepository.findLatestByIdentifierAndType(identifier, VerificationCodeEntity.Type.SIGN_UP_ACTIVATION.getType(), PageRequest.of(0, 1, Sort.by(Sort.Direction.DESC, "createdDate")));
+        Page<VerificationCodeEntity> verificationCodeEntityPage = verificationCodeRepository.findLatestByIdentifierAndType(identifier, type.getType(), PageRequest.of(0, 1, Sort.by(Sort.Direction.DESC, "createdDate")));
         if (null != verificationCodeEntityPage && !verificationCodeEntityPage.getContent().isEmpty()) {
             verificationCodeEntity = verificationCodeEntityPage.getContent().get(0);
+            handleInjectEnvironmentVariables(verificationCodeEntity, type);
             checkIfItEligibleToResend(verificationCodeEntity);
             log.info("[{}]: We have a existing record. identifier={}", identifier, identifier);
             if (verificationCodeEntity.isExpired() && !verificationCodeEntity.getStatus().equals(VerificationCodeEntity.Status.EXPIRED.getStatus())) {
@@ -53,13 +66,28 @@ public class VerificationCodeServiceImpl implements VerificationCodeService {
             resendRetriesCount = verificationCodeEntity.getNextResendRetriesCount();
         }
         verificationCodeEntity = new VerificationCodeEntity();
+        handleInjectEnvironmentVariables(verificationCodeEntity, type);
         verificationCodeEntity.setIdentifier(identifier);
-        verificationCodeEntity.setType(VerificationCodeEntity.Type.SIGN_UP_ACTIVATION.getType());
-        verificationCodeEntity.setExpiryDate(nowDateAddMinutes(5));
+        verificationCodeEntity.setType(type.getType());
+        verificationCodeEntity.setExpiryDate(verificationCodeEntity.calculateExpiryDate());
         verificationCodeEntity.setResendRetries(resendRetriesCount);
         verificationCodeEntity.setStatus(VerificationCodeEntity.Status.PENDING.getStatus());
         verificationCodeEntity = save(verificationCodeEntity);
-        log.info("[{}]: Successfully send sign up activation. identifier={}, verificationCodeId={}", identifier, identifier, verificationCodeEntity.getId());
+        log.info("[{}]: Successfully send verification. identifier={}, verificationCodeId={}", identifier, identifier, verificationCodeEntity.getId());
+    }
+
+    private void handleInjectEnvironmentVariables(VerificationCodeEntity verificationCodeEntity, VerificationCodeEntity.Type type) {
+        switch (type) {
+            case SIGN_UP_ACTIVATION:
+                verificationCodeEntity.initializeVariables(SIGN_UP_ACTIVATION_MAX_RETRIES, SIGN_UP_ACTIVATION_RESEND_REQUEST_AFTER_CERTAIN_SECONDS, SIGN_UP_ACTIVATION_REQUEST_UNLOCK_IN_SECONDS);
+                break;
+            case FORGOT_PASSWORD:
+                verificationCodeEntity.initializeVariables(FORGOT_PASSWORD_MAX_RETRIES, FORGOT_PASSWORD_RESEND_REQUEST_AFTER_CERTAIN_SECONDS, FORGOT_PASSWORD_REQUEST_UNLOCK_IN_SECONDS);
+                break;
+            default:
+                //Todo: exception
+                throw new RuntimeException("Verification code type not handled " + type.getType());
+        }
     }
 
     @Override
@@ -68,8 +96,11 @@ public class VerificationCodeServiceImpl implements VerificationCodeService {
     }
 
     @Override
-    public void isVerificationIdIsValidToProceedVerification(String id) throws InvalidArgumentException, VerificationCodeExpiredException {
-        VerificationCodeEntity verificationCodeEntity = findById(id);
+    public void isVerificationIdIsValidToProceedVerification(String id, String identifier, VerificationCodeEntity.Type type) throws InvalidArgumentException, VerificationCodeExpiredException {
+        Preconditions.checkNotNull(id, "id cannot be null");
+        Preconditions.checkNotNull(identifier, "identifier cannot be null");
+        Preconditions.checkNotNull(type, "type cannot be null");
+        VerificationCodeEntity verificationCodeEntity = findByIdAndIdentifier(id, identifier);
         if (null == verificationCodeEntity) {
             log.info("[{}]: Invalid verification code id {} not found.", id, id);
             throw new InvalidArgumentException("Invalid verification code id", ErrorCode.INVALID_ARGUMENT);
@@ -78,6 +109,7 @@ public class VerificationCodeServiceImpl implements VerificationCodeService {
             log.info("[{}]: Verification code is not satisfy id {} status={}.", id, id, verificationCodeEntity.getStatus());
             throw new InvalidArgumentException("Invalid verification code id", ErrorCode.INVALID_ARGUMENT);
         }
+        handleInjectEnvironmentVariables(verificationCodeEntity, type);
         if (verificationCodeEntity.isExpired()) {
             log.info("[{}]: Verification code already expired id={} so we updating db to change status.", id, id);
             verificationCodeEntity.setStatus(VerificationCodeEntity.Status.EXPIRED.getStatus());
@@ -87,7 +119,12 @@ public class VerificationCodeServiceImpl implements VerificationCodeService {
         }
     }
 
+    private VerificationCodeEntity findByIdAndIdentifier(String id, String identifier) {
+        return verificationCodeRepository.findByIdAndIdentifier(id, identifier);
+    }
+
     @Override
+    @Transactional(rollbackOn = Exception.class)
     public void markAsVerified(String id) throws InvalidArgumentException {
         VerificationCodeEntity verificationCodeEntity = findById(id);
         if (null == verificationCodeEntity) {
