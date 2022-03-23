@@ -21,8 +21,15 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
+import java.io.UnsupportedEncodingException;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 
 import static com.yuvaraj.blog.helpers.ResponseHelper.ok;
 import static com.yuvaraj.blog.helpers.ResponseHelper.okAsJson;
@@ -36,7 +43,7 @@ public class SignUpController {
     SignUpService signUpService;
 
     @PostMapping(path = "", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity postSignUp(@Valid @RequestBody PostSignUpRequest postSignUpRequest, HttpServletRequest httpServletRequest) throws CustomerAlreadyExistException, VerificationCodeMaxLimitReachedException, VerificationCodeResendNotAllowedException {
+    public ResponseEntity postSignUp(@Valid @RequestBody PostSignUpRequest postSignUpRequest, HttpServletRequest httpServletRequest) throws CustomerAlreadyExistException, VerificationCodeMaxLimitReachedException, VerificationCodeResendNotAllowedException, InvalidAlgorithmParameterException, NoSuchPaddingException, UnsupportedEncodingException, IllegalBlockSizeException, NoSuchAlgorithmException, BadPaddingException, InvalidKeyException {
         //todo: remove logging password
         String logMessage = String.format("%s %s", httpServletRequest.getMethod(), httpServletRequest.getRequestURI());
         log.info("Initiate to process {}, request={}", logMessage, new ObjectMapper().valueToTree(postSignUpRequest));
@@ -48,7 +55,7 @@ public class SignUpController {
 
 
     @PostMapping(path = "resend/verification", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity postResendVerification(@Valid @RequestBody PostResendVerificationRequest postResendVerificationRequest, HttpServletRequest httpServletRequest) throws CustomerAlreadyExistException, VerificationCodeMaxLimitReachedException, CustomerNotFoundException, VerificationCodeResendNotAllowedException {
+    public ResponseEntity postResendVerification(@Valid @RequestBody PostResendVerificationRequest postResendVerificationRequest, HttpServletRequest httpServletRequest) throws CustomerAlreadyExistException, VerificationCodeMaxLimitReachedException, CustomerNotFoundException, VerificationCodeResendNotAllowedException, InvalidAlgorithmParameterException, NoSuchPaddingException, UnsupportedEncodingException, IllegalBlockSizeException, NoSuchAlgorithmException, BadPaddingException, InvalidKeyException {
         String logMessage = String.format("%s %s", httpServletRequest.getMethod(), httpServletRequest.getRequestURI());
         log.info("Initiate to process {}, request={}", logMessage, new ObjectMapper().valueToTree(postResendVerificationRequest));
         signUpService.processPostResendVerification(postResendVerificationRequest);

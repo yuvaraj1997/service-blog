@@ -9,22 +9,31 @@ import com.yuvaraj.blog.helpers.ErrorCode;
 import com.yuvaraj.blog.models.db.VerificationCodeEntity;
 import com.yuvaraj.blog.repositories.VerificationCodeRepository;
 import com.yuvaraj.blog.services.VerificationCodeService;
-import lombok.AllArgsConstructor;
+import com.yuvaraj.security.providers.SimpleSymmetricCipherProvider;
+import com.yuvaraj.security.services.cipher.symmetric.SimpleSymmetricCipher;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 import javax.transaction.Transactional;
+import java.io.UnsupportedEncodingException;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 
 import static com.yuvaraj.blog.helpers.DateHelper.nowDate;
+import static com.yuvaraj.security.helpers.Constants.EnvironmentVariables.INIT_VECTOR_KEY;
+import static com.yuvaraj.security.helpers.Constants.EnvironmentVariables.SYMMETRIC_SECRET_KEY;
 
 @Service
 @Slf4j
 @Transactional
-@AllArgsConstructor
 public class VerificationCodeServiceImpl implements VerificationCodeService {
 
 
@@ -38,10 +47,19 @@ public class VerificationCodeServiceImpl implements VerificationCodeService {
     public static final int FORGOT_PASSWORD_REQUEST_UNLOCK_IN_SECONDS = 4 * 60;
 
     private final VerificationCodeRepository verificationCodeRepository;
+    private final SimpleSymmetricCipher simpleSymmetricCipher;
+
+    public VerificationCodeServiceImpl(VerificationCodeRepository verificationCodeRepository) {
+        //TODO: Think about plugin this
+        System.setProperty(SYMMETRIC_SECRET_KEY, "D5V267JQ668E3EGQ");
+        System.setProperty(INIT_VECTOR_KEY, "D5AAZSUYDZ7BVJ88");
+        this.verificationCodeRepository = verificationCodeRepository;
+        this.simpleSymmetricCipher = new SimpleSymmetricCipherProvider().get();
+    }
 
     @Override
     @Transactional(rollbackOn = Exception.class)
-    public void sendVerification(String identifier, VerificationCodeEntity.Type type) throws VerificationCodeMaxLimitReachedException, VerificationCodeResendNotAllowedException {
+    public void sendVerification(String identifier, VerificationCodeEntity.Type type) throws VerificationCodeMaxLimitReachedException, VerificationCodeResendNotAllowedException, InvalidAlgorithmParameterException, NoSuchPaddingException, UnsupportedEncodingException, IllegalBlockSizeException, NoSuchAlgorithmException, BadPaddingException, InvalidKeyException {
         //TODO: Handle tokenization verification id and send user
         Preconditions.checkNotNull(identifier, "identifier cannot be null");
         Preconditions.checkNotNull(identifier, "type cannot be null");
@@ -73,7 +91,13 @@ public class VerificationCodeServiceImpl implements VerificationCodeService {
         verificationCodeEntity.setResendRetries(resendRetriesCount);
         verificationCodeEntity.setStatus(VerificationCodeEntity.Status.PENDING.getStatus());
         verificationCodeEntity = save(verificationCodeEntity);
+        handleEmailing(verificationCodeEntity, identifier, type);
         log.info("[{}]: Successfully send verification. identifier={}, verificationCodeId={}", identifier, identifier, verificationCodeEntity.getId());
+    }
+
+    private void handleEmailing(VerificationCodeEntity verificationCodeEntity, String identifier, VerificationCodeEntity.Type type) throws InvalidAlgorithmParameterException, NoSuchPaddingException, UnsupportedEncodingException, IllegalBlockSizeException, NoSuchAlgorithmException, BadPaddingException, InvalidKeyException {
+        String token = simpleSymmetricCipher.encrypt(verificationCodeEntity.getId());
+        log.info("[{}] token test = {}", identifier, token);
     }
 
     private void handleInjectEnvironmentVariables(VerificationCodeEntity verificationCodeEntity, VerificationCodeEntity.Type type) {
@@ -96,10 +120,11 @@ public class VerificationCodeServiceImpl implements VerificationCodeService {
     }
 
     @Override
-    public void isVerificationIdIsValidToProceedVerification(String id, String identifier, VerificationCodeEntity.Type type) throws InvalidArgumentException, VerificationCodeExpiredException {
-        Preconditions.checkNotNull(id, "id cannot be null");
+    public void isVerificationIdIsValidToProceedVerification(String token, String identifier, VerificationCodeEntity.Type type) throws InvalidArgumentException, VerificationCodeExpiredException {
+        Preconditions.checkNotNull(token, "id cannot be null");
         Preconditions.checkNotNull(identifier, "identifier cannot be null");
         Preconditions.checkNotNull(type, "type cannot be null");
+        String id = getIdFromToken(token, identifier);
         VerificationCodeEntity verificationCodeEntity = findByIdAndIdentifier(id, identifier);
         if (null == verificationCodeEntity) {
             log.info("[{}]: Invalid verification code id {} not found.", id, id);
@@ -125,19 +150,30 @@ public class VerificationCodeServiceImpl implements VerificationCodeService {
 
     @Override
     @Transactional(rollbackOn = Exception.class)
-    public void markAsVerified(String id) throws InvalidArgumentException {
+    public void markAsVerified(String token, String identifier) throws InvalidArgumentException {
+        String id = getIdFromToken(token, identifier);
         VerificationCodeEntity verificationCodeEntity = findById(id);
         if (null == verificationCodeEntity) {
-            log.info("[{}]: Invalid verification code id {} not found.", id, id);
+            log.info("[{}]: Invalid verification code id {} not found.", identifier, id);
             throw new InvalidArgumentException("Invalid verification code id", ErrorCode.INVALID_ARGUMENT);
         }
         if (!Arrays.asList(VerificationCodeEntity.Status.PENDING.getStatus(), VerificationCodeEntity.Status.USER_REQUESTED_AGAIN.getStatus()).contains(verificationCodeEntity.getStatus())) {
-            log.info("[{}]: Verification code is not satisfy id {} status={}.", id, id, verificationCodeEntity.getStatus());
+            log.info("[{}]: Verification code is not satisfy id {} status={}.", identifier, id, verificationCodeEntity.getStatus());
             throw new InvalidArgumentException("Invalid verification code id", ErrorCode.INVALID_ARGUMENT);
         }
         verificationCodeEntity.setStatus(VerificationCodeEntity.Status.VERIFIED.getStatus());
         verificationCodeEntity.setVerifiedDate(nowDate());
         update(verificationCodeEntity);
+    }
+
+
+    public String getIdFromToken(String token, String identifier) throws InvalidArgumentException {
+        try {
+            return simpleSymmetricCipher.decrypt(token);
+        } catch (Exception e) {
+            log.info("[{}]: {}: Invalid verification code Token errorMessage={} token={}", identifier, e.getClass().getSimpleName(), e.getMessage(), token);
+            throw new InvalidArgumentException(e.getClass().getSimpleName() + ": Invalid verification code Token", ErrorCode.INVALID_ARGUMENT);
+        }
     }
 
     private VerificationCodeEntity save(VerificationCodeEntity verificationCodeEntity) {

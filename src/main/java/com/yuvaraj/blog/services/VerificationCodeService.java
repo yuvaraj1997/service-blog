@@ -6,6 +6,14 @@ import com.yuvaraj.blog.exceptions.verification.VerificationCodeMaxLimitReachedE
 import com.yuvaraj.blog.exceptions.verification.VerificationCodeResendNotAllowedException;
 import com.yuvaraj.blog.models.db.VerificationCodeEntity;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import java.io.UnsupportedEncodingException;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+
 /**
  *
  */
@@ -15,7 +23,7 @@ public interface VerificationCodeService {
      * @param identifier String request
      * @param type       VerificationCodeEntity.Type request
      */
-    void sendVerification(String identifier, VerificationCodeEntity.Type type) throws VerificationCodeMaxLimitReachedException, VerificationCodeResendNotAllowedException;
+    void sendVerification(String identifier, VerificationCodeEntity.Type type) throws VerificationCodeMaxLimitReachedException, VerificationCodeResendNotAllowedException, InvalidAlgorithmParameterException, NoSuchPaddingException, UnsupportedEncodingException, IllegalBlockSizeException, NoSuchAlgorithmException, BadPaddingException, InvalidKeyException;
 
     /**
      * @param id String request
@@ -30,7 +38,8 @@ public interface VerificationCodeService {
     void isVerificationIdIsValidToProceedVerification(String id, String identifier, VerificationCodeEntity.Type type) throws InvalidArgumentException, VerificationCodeExpiredException;
 
     /**
-     * @param id String request
+     * @param id         String request
+     * @param identifier identifier request
      */
-    void markAsVerified(String id) throws InvalidArgumentException;
+    void markAsVerified(String id, String identifier) throws InvalidArgumentException;
 }

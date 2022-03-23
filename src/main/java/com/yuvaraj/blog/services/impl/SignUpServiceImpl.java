@@ -20,7 +20,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 import javax.transaction.Transactional;
+import java.io.UnsupportedEncodingException;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.util.List;
 
 import static com.yuvaraj.blog.helpers.DateHelper.convertDateForEndResult;
@@ -40,7 +47,7 @@ public class SignUpServiceImpl implements SignUpService {
 
     @Override
     @Transactional(rollbackOn = Exception.class)
-    public PostSignUpResponse processPostSignUp(PostSignUpRequest postSignUpRequest) throws CustomerAlreadyExistException, VerificationCodeMaxLimitReachedException, VerificationCodeResendNotAllowedException {
+    public PostSignUpResponse processPostSignUp(PostSignUpRequest postSignUpRequest) throws CustomerAlreadyExistException, VerificationCodeMaxLimitReachedException, VerificationCodeResendNotAllowedException, InvalidAlgorithmParameterException, NoSuchPaddingException, UnsupportedEncodingException, IllegalBlockSizeException, NoSuchAlgorithmException, BadPaddingException, InvalidKeyException {
         checkIfUserAlreadyExist(postSignUpRequest.getEmailAddress());
         CustomerEntity customerEntity = getAnyExistingRecordIfAvailable(postSignUpRequest.getEmailAddress());
         if (null != customerEntity) {
@@ -54,7 +61,7 @@ public class SignUpServiceImpl implements SignUpService {
 
     @Override
     @Transactional(rollbackOn = Exception.class)
-    public void processPostResendVerification(PostResendVerificationRequest postResendVerificationRequest) throws CustomerAlreadyExistException, CustomerNotFoundException, VerificationCodeMaxLimitReachedException, VerificationCodeResendNotAllowedException {
+    public void processPostResendVerification(PostResendVerificationRequest postResendVerificationRequest) throws CustomerAlreadyExistException, CustomerNotFoundException, VerificationCodeMaxLimitReachedException, VerificationCodeResendNotAllowedException, InvalidAlgorithmParameterException, NoSuchPaddingException, UnsupportedEncodingException, IllegalBlockSizeException, NoSuchAlgorithmException, BadPaddingException, InvalidKeyException {
         checkIfUserAlreadyExist(postResendVerificationRequest.getEmailAddress());
         CustomerEntity customerEntity = getAnyExistingRecordIfAvailable(postResendVerificationRequest.getEmailAddress());
         if (null == customerEntity) {
@@ -67,18 +74,17 @@ public class SignUpServiceImpl implements SignUpService {
     @Override
     @Transactional(rollbackOn = Exception.class)
     public void processPostVerify(PostVerifyRequest postVerifyRequest) throws InvalidArgumentException, VerificationCodeExpiredException {
-        verificationCodeService.isVerificationIdIsValidToProceedVerification(postVerifyRequest.getId(), postVerifyRequest.getCustomerId(), VerificationCodeEntity.Type.SIGN_UP_ACTIVATION);
-        VerificationCodeEntity verificationCodeEntity = verificationCodeService.findById(postVerifyRequest.getId());
-        CustomerEntity customerEntity = customerService.findById(verificationCodeEntity.getIdentifier());
+        verificationCodeService.isVerificationIdIsValidToProceedVerification(postVerifyRequest.getToken(), postVerifyRequest.getCustomerId(), VerificationCodeEntity.Type.SIGN_UP_ACTIVATION);
+        CustomerEntity customerEntity = customerService.findById(postVerifyRequest.getCustomerId());
         if (null == customerEntity) {
-            log.error("[{}]: Customer Not Found.", postVerifyRequest.getId());
+            log.error("[{}]: Customer Not Found.", postVerifyRequest.getToken());
             throw new InvalidArgumentException("Customer Not Found", ErrorCode.INVALID_ARGUMENT);
         }
         if (!customerEntity.getStatus().equals(CustomerEntity.Status.VERIFICATION_PENDING.getStatus())) {
-            log.error("[{}]: Customer status is not satisfy to verify. customerId={}, status={}", postVerifyRequest.getId(), customerEntity.getId(), customerEntity.getStatus());
+            log.error("[{}]: Customer status is not satisfy to verify. customerId={}, status={}", postVerifyRequest.getToken(), customerEntity.getId(), customerEntity.getStatus());
             throw new InvalidArgumentException("Customer status is not satisfy to verify", ErrorCode.INVALID_ARGUMENT);
         }
-        verificationCodeService.markAsVerified(postVerifyRequest.getId());
+        verificationCodeService.markAsVerified(postVerifyRequest.getToken(), postVerifyRequest.getCustomerId());
         customerEntity.setStatus(CustomerEntity.Status.SUCCESS.getStatus());
         customerEntity.setCustomerCreatedDate(nowDate());
         customerService.update(customerEntity);

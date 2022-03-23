@@ -18,7 +18,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 import javax.transaction.Transactional;
+import java.io.UnsupportedEncodingException;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.util.List;
 
 @Service
@@ -32,7 +39,7 @@ public class ForgotPasswordServiceImpl implements ForgotPasswordService {
     private final PasswordEncoder passwordEncoder;
 
     @Override
-    public void processPostForgotPassword(PostForgotPasswordRequest postForgotPasswordRequest) {
+    public void processPostForgotPassword(PostForgotPasswordRequest postForgotPasswordRequest) throws InvalidAlgorithmParameterException, NoSuchPaddingException, UnsupportedEncodingException, IllegalBlockSizeException, NoSuchAlgorithmException, BadPaddingException, InvalidKeyException {
         CustomerEntity customerEntity = customerService.findByEmailTypeSubtypeAndStatuses(
                 postForgotPasswordRequest.getEmailAddress(),
                 CustomerEntity.Type.CUSTOMER.getType(),
@@ -40,15 +47,15 @@ public class ForgotPasswordServiceImpl implements ForgotPasswordService {
                 List.of(CustomerEntity.Status.SUCCESS.getStatus())
         );
         if (null == customerEntity) {
-            log.info("Forgot Password: Customer not found or not in success state emailAddress={}, we will still return 200 to prevent any email leakage", postForgotPasswordRequest.getEmailAddress());
+            log.info("[{}]: Forgot Password: Customer not found or not in success state emailAddress={}, we will still return 200 to prevent any email leakage", postForgotPasswordRequest.getEmailAddress(), postForgotPasswordRequest.getEmailAddress());
             return;
         }
         try {
             verificationCodeService.sendVerification(customerEntity.getId(), VerificationCodeEntity.Type.FORGOT_PASSWORD);
         } catch (VerificationCodeMaxLimitReachedException e) {
-            log.info("VerificationCodeMaxLimitReachedException: Forgot Password: Customer verification code max limit request reached, we will still return 200 to prevent any email leakage. emailAddress={}, customerId={}, infoMessage={}", customerEntity.getEmail(), customerEntity.getId(), e.getErrorMessage());
+            log.info("[{}]: VerificationCodeMaxLimitReachedException: Forgot Password: Customer verification code max limit request reached, we will still return 200 to prevent any email leakage. emailAddress={}, customerId={}, infoMessage={}", postForgotPasswordRequest.getEmailAddress(), customerEntity.getEmail(), customerEntity.getId(), e.getErrorMessage());
         } catch (VerificationCodeResendNotAllowedException e) {
-            log.info("VerificationCodeResendNotAllowedException: Forgot Password: Customer verification resend not allowed, we will still return 200 to prevent any email leakage. emailAddress={}, customerId={}, infoMessage={}", customerEntity.getEmail(), customerEntity.getId(), e.getErrorMessage());
+            log.info("[{}]: VerificationCodeResendNotAllowedException: Forgot Password: Customer verification resend not allowed, we will still return 200 to prevent any email leakage. emailAddress={}, customerId={}, infoMessage={}", postForgotPasswordRequest.getEmailAddress(), customerEntity.getEmail(), customerEntity.getId(), e.getErrorMessage());
         }
     }
 
@@ -67,6 +74,6 @@ public class ForgotPasswordServiceImpl implements ForgotPasswordService {
             throw new InvalidArgumentException("Customer status is not satisfy.", ErrorCode.INVALID_ARGUMENT);
         }
         passwordService.upsertPassword(passwordEncoder.encode(postForgotPasswordUpsertRequest.getPassword()), postForgotPasswordUpsertRequest.getCustomerId());
-        verificationCodeService.markAsVerified(postForgotPasswordUpsertRequest.getToken());
+        verificationCodeService.markAsVerified(postForgotPasswordUpsertRequest.getToken(), postForgotPasswordUpsertRequest.getCustomerId());
     }
 }
