@@ -19,7 +19,6 @@ import javax.transaction.Transactional;
 public class PasswordServiceImpl implements PasswordService {
 
     private final PasswordRepository passwordRepository;
-
     private final CustomerService customerService;
 
     @Override
@@ -28,7 +27,7 @@ public class PasswordServiceImpl implements PasswordService {
         Preconditions.checkNotNull(password, "customerId cannot be null");
         CustomerEntity customerEntity = customerService.findById(customerId);
         Preconditions.checkNotNull(customerEntity, "customerEntity could not be found customerId = " + customerId);
-        PasswordEntity passwordEntity = findByCustomerId(customerEntity);
+        PasswordEntity passwordEntity = getByCustomerEntity(customerEntity);
         if (null != passwordEntity) {
             passwordEntity.setPassword(password);
             passwordRepository.save(passwordEntity);
@@ -41,7 +40,8 @@ public class PasswordServiceImpl implements PasswordService {
         passwordRepository.save(passwordEntity);
     }
 
-    private PasswordEntity findByCustomerId(CustomerEntity customerEntity) {
-        return passwordRepository.findByCustomerId(customerEntity);
+    @Override
+    public PasswordEntity getByCustomerEntity(CustomerEntity customerEntity) {
+        return passwordRepository.findByCustomerEntity(customerEntity);
     }
 }

@@ -18,7 +18,6 @@ public class CustomerServiceImpl implements CustomerService {
 
     private final CustomerRepository customerRepository;
 
-
     @Override
     public CustomerEntity save(CustomerEntity customerEntity) {
         return customerRepository.save(customerEntity);
@@ -37,5 +36,10 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     public CustomerEntity findByEmailTypeSubtypeAndStatuses(String email, String type, String subtype, List<String> status) {
         return customerRepository.findByEmailTypeSubtypeAndStatuses(email, type, subtype, status);
+    }
+
+    @Override
+    public CustomerEntity findByEmail(String email) {
+        return customerRepository.findByEmail(email);
     }
 }

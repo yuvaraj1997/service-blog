@@ -8,5 +8,5 @@ import org.springframework.data.jpa.repository.Query;
 public interface PasswordRepository extends JpaRepository<PasswordEntity, Long> {
 
     @Query("SELECT p FROM PasswordEntity p WHERE p.customerEntity = ?1")
-    PasswordEntity findByCustomerId(CustomerEntity customerEntity);
+    PasswordEntity findByCustomerEntity(CustomerEntity customerEntity);
 }

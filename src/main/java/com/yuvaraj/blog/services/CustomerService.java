@@ -13,4 +13,6 @@ public interface CustomerService {
     CustomerEntity findById(String id);
 
     CustomerEntity findByEmailTypeSubtypeAndStatuses(String email, String type, String subtype, List<String> status);
+
+    CustomerEntity findByEmail(String email);
 }

@@ -16,6 +16,7 @@ public class ResponseHelper {
     static {
         httpStatusCode.put(HttpStatus.OK.value(), "HTTP 200 - OK");
         httpStatusCode.put(HttpStatus.BAD_REQUEST.value(), "HTTP 400 - Invalid Request Message");
+        httpStatusCode.put(HttpStatus.FORBIDDEN.value(), "HTTP 403 - You don't have permission to access this resource.");
         httpStatusCode.put(HttpStatus.INTERNAL_SERVER_ERROR.value(), "HTTP 500 - Internal Service Error");
     }
 
