@@ -2,7 +2,6 @@ package com.yuvaraj.blog.configuration;
 
 import com.yuvaraj.blog.filters.CustomAuthenticationFilter;
 import com.yuvaraj.security.services.JwtGenerationService;
-import com.yuvaraj.security.services.JwtManagerService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -23,7 +22,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     private final JwtGenerationService jwtGenerationService;
-    private final JwtManagerService jwtManagerService;
     private final UserDetailsService userDetailsService;
 
     @Override
@@ -37,7 +35,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         http.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
         http.formLogin().loginProcessingUrl("/api/login");
         http.authorizeRequests().anyRequest().permitAll();
-        http.addFilterBefore(new CustomAuthenticationFilter(authenticationManagerBean(), jwtGenerationService, jwtManagerService), UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(new CustomAuthenticationFilter(authenticationManagerBean(), jwtGenerationService), UsernamePasswordAuthenticationFilter.class);
     }
 
     @Bean
