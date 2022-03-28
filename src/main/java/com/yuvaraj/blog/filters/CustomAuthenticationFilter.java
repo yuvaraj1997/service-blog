@@ -29,6 +29,7 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Map;
 
+import static com.yuvaraj.blog.helpers.ErrorCode.INVALID_USERNAME_OR_PASSWORD;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 
@@ -88,7 +89,7 @@ public class CustomAuthenticationFilter extends AbstractAuthenticationProcessing
     protected void unsuccessfulAuthentication(HttpServletRequest request, HttpServletResponse response, AuthenticationException failed) throws IOException, ServletException {
         //TODO: Can handle locking system
         response.setContentType(APPLICATION_JSON_VALUE);
-        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-        new ObjectMapper().writeValue(response.getOutputStream(), ResponseHelper.handleGeneralException(HttpStatus.FORBIDDEN.value(), null));
+        response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+        new ObjectMapper().writeValue(response.getOutputStream(), ResponseHelper.handleGeneralException(HttpStatus.BAD_REQUEST.value(), INVALID_USERNAME_OR_PASSWORD));
     }
 }
