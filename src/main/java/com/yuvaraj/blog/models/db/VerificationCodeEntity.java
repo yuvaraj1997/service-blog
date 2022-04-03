@@ -13,7 +13,7 @@ import javax.persistence.*;
 import java.io.Serializable;
 import java.util.Date;
 
-import static com.yuvaraj.blog.helpers.DateHelper.*;
+import static com.yuvaraj.blog.helpers.DateHelpers.*;
 
 @Entity(name = "VerificationCodeEntity")
 @Table(name = "verification_code_tab")

@@ -30,8 +30,8 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
 
-import static com.yuvaraj.blog.helpers.DateHelper.convertDateForEndResult;
-import static com.yuvaraj.blog.helpers.DateHelper.nowDate;
+import static com.yuvaraj.blog.helpers.DateHelpers.convertDateForEndResult;
+import static com.yuvaraj.blog.helpers.DateHelpers.nowDate;
 
 @Service
 @Slf4j

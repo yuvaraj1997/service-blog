@@ -27,7 +27,7 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 
-import static com.yuvaraj.blog.helpers.DateHelper.nowDate;
+import static com.yuvaraj.blog.helpers.DateHelpers.nowDate;
 import static com.yuvaraj.security.helpers.Constants.EnvironmentVariables.INIT_VECTOR_KEY;
 import static com.yuvaraj.security.helpers.Constants.EnvironmentVariables.SYMMETRIC_SECRET_KEY;
 

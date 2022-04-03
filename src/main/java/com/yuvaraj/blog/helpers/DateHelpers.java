@@ -8,7 +8,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
 
-public class DateHelper {
+public class DateHelpers {
 
 
     public static final String DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ssZ";

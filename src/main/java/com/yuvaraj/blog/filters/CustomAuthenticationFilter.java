@@ -13,8 +13,7 @@ import org.springframework.security.authentication.AuthenticationServiceExceptio
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
@@ -34,13 +33,12 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 
 @Slf4j
-public class CustomAuthenticationFilter extends AbstractAuthenticationProcessingFilter {
+public class CustomAuthenticationFilter extends UsernamePasswordAuthenticationFilter {
 
     private final AuthenticationManager authenticationManager;
     private final JwtGenerationService jwtGenerationService;
 
     public CustomAuthenticationFilter(AuthenticationManager authenticationManager, JwtGenerationService jwtGenerationService) {
-        super(new AntPathRequestMatcher("/api/login", "POST"));
         this.authenticationManager = authenticationManager;
         this.jwtGenerationService = jwtGenerationService;
     }

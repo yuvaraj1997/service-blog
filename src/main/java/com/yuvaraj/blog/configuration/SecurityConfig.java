@@ -1,6 +1,8 @@
 package com.yuvaraj.blog.configuration;
 
 import com.yuvaraj.blog.filters.CustomAuthenticationFilter;
+import com.yuvaraj.blog.filters.CustomAuthorizationFilter;
+import com.yuvaraj.blog.services.SignInService;
 import com.yuvaraj.security.services.JwtGenerationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -15,6 +17,12 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import static com.yuvaraj.blog.helpers.Constants.LOGIN_PROCESSING_URL;
+import static com.yuvaraj.blog.helpers.Constants.SESSION_TOKEN_GENERATION_URL;
 
 @Configuration
 @EnableWebSecurity
@@ -22,6 +30,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     private final JwtGenerationService jwtGenerationService;
+    private final SignInService signInService;
     private final UserDetailsService userDetailsService;
 
     @Override
@@ -31,11 +40,16 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
+        CustomAuthenticationFilter customAuthenticationFilter = new CustomAuthenticationFilter(authenticationManagerBean(), jwtGenerationService);
+        customAuthenticationFilter.setFilterProcessesUrl(LOGIN_PROCESSING_URL);
         http.csrf().disable();
+        //TODO: Important cors
+        http.cors();
         http.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
-        http.formLogin().loginProcessingUrl("/api/login");
+        http.authorizeRequests().antMatchers(SESSION_TOKEN_GENERATION_URL).authenticated();
         http.authorizeRequests().anyRequest().permitAll();
-        http.addFilterBefore(new CustomAuthenticationFilter(authenticationManagerBean(), jwtGenerationService), UsernamePasswordAuthenticationFilter.class);
+        http.addFilter(customAuthenticationFilter);
+        http.addFilterBefore(new CustomAuthorizationFilter(signInService, jwtGenerationService), UsernamePasswordAuthenticationFilter.class);
     }
 
     @Bean
@@ -48,5 +62,15 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     PasswordEncoder passwordEncoder() {
         //TODO: Think to secure more
         return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    CorsConfigurationSource corsConfiguration() {
+        CorsConfiguration corsConfig = new CorsConfiguration();
+        corsConfig.applyPermitDefaultValues();
+        UrlBasedCorsConfigurationSource source =
+                new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", corsConfig);
+        return source;
     }
 }
