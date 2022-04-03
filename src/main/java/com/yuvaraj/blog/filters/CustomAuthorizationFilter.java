@@ -41,8 +41,10 @@ public class CustomAuthorizationFilter extends OncePerRequestFilter {
             if (servletPath.equals(LOGIN_PROCESSING_URL)) {
                 filterChain.doFilter(request, response);
             } else if (servletPath.equals(SESSION_TOKEN_GENERATION_URL)) {
+                response.setContentType(APPLICATION_JSON_VALUE);
                 String customerId = request.getParameter("customerId");
-                signInService.validateRefreshToken(request.getHeader(AUTHORIZATION), customerId);
+                String authorization = request.getHeader(AUTHORIZATION);
+                signInService.validateRefreshToken(authorization, customerId);
                 AuthSuccessfulResponse authSuccessfulResponse = jwtGenerationService.generateSessionToken(customerId);
                 log.info("{}", JsonHelper.toJson(authSuccessfulResponse));
                 new ObjectMapper().writeValue(response.getOutputStream(), authSuccessfulResponse);

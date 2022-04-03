@@ -62,10 +62,10 @@ public class SignInServiceImpl implements SignInService, UserDetailsService {
     }
 
     @Override
-    public void validateRefreshToken(String token, String customerId) throws Exception {
-        Preconditions.checkArgument(null != token && token.isEmpty(), "Validate Refresh Token: token cannot be null or empty");
-        Preconditions.checkArgument(null != customerId && customerId.isEmpty(), "Validate Refresh Token: customerId cannot be null or empty");
-        DefaultToken defaultToken = (DefaultToken) jwtManagerService.extractJwtPayload(token, DefaultToken.class);
+    public void validateRefreshToken(String authorization, String customerId) throws Exception {
+        Preconditions.checkArgument(null != authorization && !authorization.isEmpty(), "Validate Refresh Token: authorization cannot be null or empty");
+        Preconditions.checkArgument(null != customerId && !customerId.isEmpty(), "Validate Refresh Token: customerId cannot be null or empty");
+        DefaultToken defaultToken = (DefaultToken) jwtManagerService.extractJwtPayload(authorization, DefaultToken.class);
         Preconditions.checkNotNull(defaultToken, "Validate Refresh Token: Unable to extract jwt payload");
         tokenValidationService.verifyToken(defaultToken, List.of(TokenType.REFRESH.getType()));
         SimpleSymmetricCipher simpleSymmetricCipher = (new SimpleSymmetricCipherProvider()).get();
