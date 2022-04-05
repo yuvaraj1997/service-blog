@@ -1,13 +1,16 @@
 package com.yuvaraj.blog.helpers;
 
+import lombok.extern.slf4j.Slf4j;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Minutes;
 
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
 
+@Slf4j
 public class DateHelpers {
 
 
@@ -55,4 +58,15 @@ public class DateHelpers {
     }
 
 
+    public static Date convertStringToDate(String date, String dateFormat) {
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat(dateFormat);
+        simpleDateFormat.setTimeZone(TimeZone.getTimeZone(TIME_ZONE));
+        simpleDateFormat.setLenient(true);
+        try {
+            return simpleDateFormat.parse(date);
+        } catch (ParseException e) {
+            log.warn("Unable to parse requestedDate={}, dateFormat={}, errorMessage={}", date, dateFormat, e.getMessage());
+            return null;
+        }
+    }
 }

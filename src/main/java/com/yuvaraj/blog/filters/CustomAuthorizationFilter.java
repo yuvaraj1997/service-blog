@@ -16,7 +16,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
-import static com.yuvaraj.blog.helpers.Constants.LOGIN_PROCESSING_URL;
 import static com.yuvaraj.blog.helpers.Constants.SESSION_TOKEN_GENERATION_URL;
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
@@ -38,19 +37,18 @@ public class CustomAuthorizationFilter extends OncePerRequestFilter {
         String servletPath = request.getServletPath();
         log.info("requesting to {}", servletPath);
         try {
-            if (servletPath.equals(LOGIN_PROCESSING_URL)) {
-                filterChain.doFilter(request, response);
+            String authorization = request.getHeader(AUTHORIZATION);
+            String customerId = request.getParameter("customerId");
+            if (null != authorization && !authorization.isEmpty() && null != customerId && !customerId.isEmpty()) {
+                signInService.validateSessionToken(authorization, customerId);
             } else if (servletPath.equals(SESSION_TOKEN_GENERATION_URL)) {
                 response.setContentType(APPLICATION_JSON_VALUE);
-                String customerId = request.getParameter("customerId");
-                String authorization = request.getHeader(AUTHORIZATION);
                 signInService.validateRefreshToken(authorization, customerId);
                 AuthSuccessfulResponse authSuccessfulResponse = jwtGenerationService.generateSessionToken(customerId);
                 log.info("{}", JsonHelper.toJson(authSuccessfulResponse));
                 new ObjectMapper().writeValue(response.getOutputStream(), authSuccessfulResponse);
-            } else {
-                filterChain.doFilter(request, response);
             }
+            filterChain.doFilter(request, response);
         } catch (Exception e) {
             log.info("Exception: Attempted to access authenticated url errorMessage={}, errorClass={}", e.getMessage(), e.getClass().getSimpleName());
             response.setContentType(APPLICATION_JSON_VALUE);
@@ -58,12 +56,4 @@ public class CustomAuthorizationFilter extends OncePerRequestFilter {
             new ObjectMapper().writeValue(response.getOutputStream(), ResponseHelper.handleGeneralException(HttpStatus.FORBIDDEN.value(), null));
         }
     }
-
-//    private final AuthenticationManager authenticationManager;
-//    private final JwtGenerationService jwtGenerationService;
-//
-//    public CustomAuthorizationFilter(AuthenticationManager authenticationManager, JwtGenerationService jwtGenerationService) {
-//        this.authenticationManager = authenticationManager;
-//        this.jwtGenerationService = jwtGenerationService;
-//    }
 }
