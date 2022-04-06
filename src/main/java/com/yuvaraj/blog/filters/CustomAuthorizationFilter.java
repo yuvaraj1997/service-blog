@@ -39,17 +39,18 @@ public class CustomAuthorizationFilter extends OncePerRequestFilter {
         try {
             String authorization = request.getHeader(AUTHORIZATION);
             String customerId = request.getParameter("customerId");
-            if (null != authorization && !authorization.isEmpty() && null != customerId && !customerId.isEmpty()) {
-                signInService.validateSessionToken(authorization, customerId);
-            } else if (servletPath.equals(SESSION_TOKEN_GENERATION_URL)) {
+            if (servletPath.equals(SESSION_TOKEN_GENERATION_URL)) {
                 response.setContentType(APPLICATION_JSON_VALUE);
                 signInService.validateRefreshToken(authorization, customerId);
                 AuthSuccessfulResponse authSuccessfulResponse = jwtGenerationService.generateSessionToken(customerId);
                 log.info("{}", JsonHelper.toJson(authSuccessfulResponse));
                 new ObjectMapper().writeValue(response.getOutputStream(), authSuccessfulResponse);
+            } else if (null != authorization && !authorization.isEmpty() && null != customerId && !customerId.isEmpty()) {
+                signInService.validateSessionToken(authorization, customerId);
             }
             filterChain.doFilter(request, response);
         } catch (Exception e) {
+            //TODO: Check why going if set response on top "because response is already commited servlet exception
             log.info("Exception: Attempted to access authenticated url errorMessage={}, errorClass={}", e.getMessage(), e.getClass().getSimpleName());
             response.setContentType(APPLICATION_JSON_VALUE);
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);

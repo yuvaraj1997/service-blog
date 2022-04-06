@@ -33,8 +33,8 @@ public class SignInEntity implements Serializable {
     @JoinColumn(name = "sit_customer_id", referencedColumnName = "ct_id")
     private CustomerEntity customerEntity;
 
-    @Column(name = "sit_refresh_token_generation_date", nullable = false)
-    private Date refreshTokenGenerationDate;
+    @Column(name = "sit_refresh_token_generation_time", nullable = false)
+    private long refreshTokenGenerationTime;
 
     @Column(name = "sit_device_name")
     private String deviceName;

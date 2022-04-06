@@ -2,6 +2,7 @@ package com.yuvaraj.blog.filters;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yuvaraj.blog.exceptions.InvalidArgumentException;
+import com.yuvaraj.blog.exceptions.signIn.SignInMaxSessionReachedException;
 import com.yuvaraj.blog.helpers.ResponseHelper;
 import com.yuvaraj.blog.models.inbuiltClass.CustomUser;
 import com.yuvaraj.blog.models.signIn.SignInRequest;
@@ -30,8 +31,7 @@ import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 
-import static com.yuvaraj.blog.helpers.ErrorCode.INVALID_ARGUMENT;
-import static com.yuvaraj.blog.helpers.ErrorCode.INVALID_USERNAME_OR_PASSWORD;
+import static com.yuvaraj.blog.helpers.ErrorCode.*;
 import static com.yuvaraj.blog.helpers.ValidationHelper.checkNotNullAndNotEmpty;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
@@ -55,13 +55,43 @@ public class CustomAuthenticationFilter extends UsernamePasswordAuthenticationFi
             SignInRequest signInRequest = new ObjectMapper().readValue(request.getInputStream(), SignInRequest.class);
             validateSignInRequest(signInRequest);
             log.info("[{}]:AttemptAuthentication: Attempting login ", signInRequest.getEmailAddress());
-            UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken = new UsernamePasswordAuthenticationToken(signInRequest, signInRequest.getEmailAddress());
+            UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken = new UsernamePasswordAuthenticationToken(new ObjectMapper().writeValueAsString(signInRequest), signInRequest.getPassword());
             return authenticationManager.authenticate(usernamePasswordAuthenticationToken);
         } catch (IOException e) {
             throw new AuthenticationServiceException(e.getMessage(), e);
         } catch (InvalidArgumentException e) {
             throw new AuthenticationServiceException(e.getMessage(), e);
         }
+    }
+
+    @Override
+    protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response, FilterChain chain, Authentication authResult) throws IOException, ServletException {
+        response.setContentType(APPLICATION_JSON_VALUE);
+        CustomUser user = (CustomUser) authResult.getPrincipal();
+        try {
+            //TODO: Enhance security service to return all possible values like
+            AuthSuccessfulResponse authSuccessfulResponse = jwtGenerationService.generateRefreshToken(user.getCustomerId());
+            signInService.handleSignInData(user, authSuccessfulResponse, user.getSignInRequest());
+            log.info("{}", JsonHelper.toJson(authSuccessfulResponse));
+            new ObjectMapper().writeValue(response.getOutputStream(), authSuccessfulResponse);
+        } catch (InvalidAlgorithmParameterException | NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException | NoSuchAlgorithmException | InvalidKeyException | SignInMaxSessionReachedException e) {
+            throw new AuthenticationServiceException(e.getMessage(), e);
+        }
+    }
+
+    @Override
+    protected void unsuccessfulAuthentication(HttpServletRequest request, HttpServletResponse response, AuthenticationException failed) throws IOException, ServletException {
+        //TODO: Can handle locking system
+        response.setContentType(APPLICATION_JSON_VALUE);
+        response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+        log.error(failed.getMessage());
+        if (failed.getCause() instanceof InvalidArgumentException) {
+            new ObjectMapper().writeValue(response.getOutputStream(), ResponseHelper.handleGeneralException(HttpStatus.BAD_REQUEST.value(), INVALID_ARGUMENT));
+        } else if (failed.getCause() instanceof SignInMaxSessionReachedException) {
+            SignInMaxSessionReachedException signInMaxSessionReachedException = (SignInMaxSessionReachedException) failed.getCause();
+            new ObjectMapper().writeValue(response.getOutputStream(), ResponseHelper.handleGeneralException(HttpStatus.BAD_REQUEST.value(), MAX_NUMBER_OF_SESSION_REACHED, signInMaxSessionReachedException.getDeviceDetails()));
+        }
+        new ObjectMapper().writeValue(response.getOutputStream(), ResponseHelper.handleGeneralException(HttpStatus.BAD_REQUEST.value(), INVALID_USERNAME_OR_PASSWORD));
     }
 
     private void validateSignInRequest(SignInRequest signInRequest) throws InvalidArgumentException {
@@ -72,43 +102,5 @@ public class CustomAuthenticationFilter extends UsernamePasswordAuthenticationFi
 //        checkNotNullAndNotEmpty(signInRequest.getDeviceName(), "deviceName cannot be null or empty");
         checkNotNullAndNotEmpty(signInRequest.getDeviceType(), "deviceType cannot be null or empty");
 //        checkNotNullAndNotEmpty(signInRequest.getDeviceSubtype(), "devSubType cannot be null or empty");
-    }
-
-    @Override
-    protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response, FilterChain chain, Authentication authResult) throws IOException, ServletException {
-        response.setContentType(APPLICATION_JSON_VALUE);
-        CustomUser user = (CustomUser) authResult.getPrincipal();
-        try {
-
-            SignInRequest signInRequest = new ObjectMapper().readValue(request.getInputStream(), SignInRequest.class);
-            //TODO: Enhance security service to return all possible values like
-            AuthSuccessfulResponse authSuccessfulResponse = jwtGenerationService.generateRefreshToken(user.getCustomerId());
-            signInService.handleSignInData(user, authSuccessfulResponse, signInRequest);
-            log.info("{}", JsonHelper.toJson(authSuccessfulResponse));
-            new ObjectMapper().writeValue(response.getOutputStream(), authSuccessfulResponse);
-        } catch (InvalidAlgorithmParameterException e) {
-            e.printStackTrace();
-        } catch (NoSuchPaddingException e) {
-            e.printStackTrace();
-        } catch (IllegalBlockSizeException e) {
-            e.printStackTrace();
-        } catch (BadPaddingException e) {
-            e.printStackTrace();
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        } catch (InvalidKeyException e) {
-            e.printStackTrace();
-        }
-    }
-
-    @Override
-    protected void unsuccessfulAuthentication(HttpServletRequest request, HttpServletResponse response, AuthenticationException failed) throws IOException, ServletException {
-        //TODO: Can handle locking system
-        response.setContentType(APPLICATION_JSON_VALUE);
-        response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-        if (failed.getCause() instanceof InvalidArgumentException) {
-            new ObjectMapper().writeValue(response.getOutputStream(), ResponseHelper.handleGeneralException(HttpStatus.BAD_REQUEST.value(), INVALID_ARGUMENT));
-        }
-        new ObjectMapper().writeValue(response.getOutputStream(), ResponseHelper.handleGeneralException(HttpStatus.BAD_REQUEST.value(), INVALID_USERNAME_OR_PASSWORD));
     }
 }

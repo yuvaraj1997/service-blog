@@ -1,8 +1,10 @@
 package com.yuvaraj.blog.services.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-import com.yuvaraj.blog.helpers.DateHelpers;
+import com.yuvaraj.blog.exceptions.signIn.SignInMaxSessionReachedException;
+import com.yuvaraj.blog.helpers.ErrorCode;
 import com.yuvaraj.blog.models.db.CustomerEntity;
 import com.yuvaraj.blog.models.db.PasswordEntity;
 import com.yuvaraj.blog.models.db.SignInEntity;
@@ -12,6 +14,7 @@ import com.yuvaraj.blog.repositories.SignInRepository;
 import com.yuvaraj.blog.services.CustomerService;
 import com.yuvaraj.blog.services.PasswordService;
 import com.yuvaraj.blog.services.SignInService;
+import com.yuvaraj.security.helpers.DateHelper;
 import com.yuvaraj.security.helpers.JsonHelper;
 import com.yuvaraj.security.helpers.TokenType;
 import com.yuvaraj.security.models.AuthSuccessfulResponse;
@@ -34,11 +37,11 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 import javax.transaction.Transactional;
+import java.nio.file.AccessDeniedException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import static com.yuvaraj.blog.helpers.DateHelpers.DATE_FORMAT;
 import static com.yuvaraj.blog.models.db.SignInEntity.Status.FORCED_SIGN_OUT;
 
 @Service
@@ -54,7 +57,15 @@ public class SignInServiceImpl implements SignInService, UserDetailsService {
     private final JwtManagerService jwtManagerService;
 
     @Override
-    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+    public UserDetails loadUserByUsername(String signInRequestString) throws UsernameNotFoundException {
+        SignInRequest signInRequest = null;
+        try {
+            signInRequest = new ObjectMapper().readValue(signInRequestString, SignInRequest.class);
+        } catch (JsonProcessingException e) {
+            log.error("JsonProcessingException: Error while readValue signInRequestString={}, errorMessage={}", signInRequestString, e.getMessage());
+            throw new UsernameNotFoundException("Unexpected error");
+        }
+        String email = signInRequest.getEmailAddress();
         log.info("[{}]: Load User By Username: Attempting to login", email);
         CustomerEntity customerEntity = customerService.findByEmail(email);
         if (null == customerEntity) {
@@ -68,7 +79,7 @@ public class SignInServiceImpl implements SignInService, UserDetailsService {
             authorities.add(new SimpleGrantedAuthority(customerEntity.getAuthorityEntity().getRole()));
             log.info("[{}]:Load User By Username: Success", email);
             //TODO: Inbuilt User got many implementations please try to take advantage of that
-            return new CustomUser(customerEntity.getId(), customerEntity.getEmail(), passwordEntity.getPassword(), authorities);
+            return new CustomUser(signInRequest, customerEntity.getId(), customerEntity.getEmail(), passwordEntity.getPassword(), authorities);
         }
         //TODO: Handle properly
         log.info("[{}]:Load User By Username: Customer is not in {} status, userCurrentStatus={}", email, CustomerEntity.Status.SUCCESS.getStatus(), customerEntity.getStatus());
@@ -88,7 +99,33 @@ public class SignInServiceImpl implements SignInService, UserDetailsService {
         Preconditions.checkArgument(null != refreshToken.getCustomerId() && !refreshToken.getCustomerId().isEmpty(), "Validate Refresh Token: customerId cannot be null or empty in the token");
         Preconditions.checkArgument(refreshToken.getCustomerId().equals(customerId), "Validate Refresh Token: requested and token customerId in the token not tally");
         //TODO: Upsert refresh token tab
+        CustomerEntity customerEntity = customerService.findById(refreshToken.getCustomerId());
+        Preconditions.checkNotNull(customerEntity, "customer entity is null cannot find = " + refreshToken.getCustomerId());
+        if (customerEntity.getStatus().equals(CustomerEntity.Status.SUCCESS.getStatus())) {
+            checkIfRefreshTokenCreatedDateSyncWithOurSignInTab(customerEntity, defaultToken.getCreateTime());
+            return;
+        }
+        //TODO: Handle proepr error
+        throw new AccessDeniedException("Customer not in success state");
 
+    }
+
+    private void checkIfRefreshTokenCreatedDateSyncWithOurSignInTab(CustomerEntity customerEntity, long createTime) throws AccessDeniedException {
+        Page<SignInEntity> signInEntityPage = findLatestSignInData(customerEntity, SignInEntity.Status.ACTIVE.getStatus(), PageRequest.of(0, 5, Sort.by(Sort.Direction.DESC, "createdDate")));
+        if (null == signInEntityPage || signInEntityPage.getContent().isEmpty()) {
+            //TODO: Handle proepr error
+            log.error("[{}]: Sign in tab is empty", customerEntity.getId());
+            throw new AccessDeniedException("Sign in tab is empty");
+        }
+        for (SignInEntity signInEntity : signInEntityPage.getContent()) {
+            if (createTime == signInEntity.getRefreshTokenGenerationTime() && signInEntity.getStatus().equals(SignInEntity.Status.ACTIVE.getStatus())) {
+                log.info("[{}]: Yay! Found identical refresh token generation time with refresh token that provided.", customerEntity.getId());
+                return;
+            }
+        }
+        //TODO: Handle proepr error
+        log.error("[{}]: Ohho! Refresh token generation time is not tally with out sign in tab. So we proceeding to throw exception", customerEntity.getId());
+        throw new AccessDeniedException("Ohho! Refresh token generation time is not tally with out sign in tab");
     }
 
     @Override
@@ -107,7 +144,7 @@ public class SignInServiceImpl implements SignInService, UserDetailsService {
     }
 
     @Override
-    public void handleSignInData(CustomUser user, AuthSuccessfulResponse authSuccessfulResponse, SignInRequest signInRequest) {
+    public void handleSignInData(CustomUser user, AuthSuccessfulResponse authSuccessfulResponse, SignInRequest signInRequest) throws SignInMaxSessionReachedException {
         log.info("[{}]: Handling Sign In Data request={}", user.getCustomerId(), JsonHelper.toJson(user));
         CustomerEntity customerEntity = customerService.findById(user.getCustomerId());
         if (null == customerEntity) {
@@ -115,8 +152,8 @@ public class SignInServiceImpl implements SignInService, UserDetailsService {
             throw new UsernameNotFoundException("Customer not found");
         }
         if (customerEntity.getStatus().equals(CustomerEntity.Status.SUCCESS.getStatus())) {
-            validateIfSignInSessionMaxReached(customerEntity, user);
-            insertSignInRecord(customerEntity, authSuccessfulResponse.getGenerationDate(), signInRequest);
+            validateIfSignInSessionMaxReached(customerEntity, signInRequest);
+            insertSignInRecord(customerEntity, authSuccessfulResponse.getGenerationTimestamp(), signInRequest);
             return;
         }
         //TODO: Handle properly
@@ -124,20 +161,20 @@ public class SignInServiceImpl implements SignInService, UserDetailsService {
         throw new UsernameNotFoundException(" Customer is not in allowed status");
     }
 
-    private void insertSignInRecord(CustomerEntity customerEntity, String generationDate, SignInRequest signInRequest) {
+    private void insertSignInRecord(CustomerEntity customerEntity, long generationTimeStamp, SignInRequest signInRequest) {
         SignInEntity signInEntity = new SignInEntity();
         signInEntity.setCustomerEntity(customerEntity);
-        signInEntity.setRefreshTokenGenerationDate(DateHelpers.convertStringToDate(generationDate, DATE_FORMAT));
+        signInEntity.setRefreshTokenGenerationTime(generationTimeStamp);
         signInEntity.setDeviceName(signInRequest.getDeviceName());
         signInEntity.setDeviceType(signInRequest.getDeviceType());
         signInEntity.setDeviceSubType(signInRequest.getDeviceSubtype());
         signInEntity.setIpAddress(signInRequest.getIpAddress());
-        signInEntity.setSignInDate(signInEntity.getRefreshTokenGenerationDate());
+        signInEntity.setSignInDate(DateHelper.convertTimeStampToDate(generationTimeStamp));
         signInEntity.setStatus(SignInEntity.Status.ACTIVE.getStatus());
         save(signInEntity);
     }
 
-    private void validateIfSignInSessionMaxReached(CustomerEntity customerEntity, CustomUser user) {
+    private void validateIfSignInSessionMaxReached(CustomerEntity customerEntity, SignInRequest signInRequest) throws SignInMaxSessionReachedException {
         log.info("[{}]: Validate if sign in session max reached", customerEntity.getId());
         Page<SignInEntity> signInEntityPage = findLatestSignInData(customerEntity, SignInEntity.Status.ACTIVE.getStatus(), PageRequest.of(0, 5, Sort.by(Sort.Direction.DESC, "createdDate")));
         if (null == signInEntityPage || signInEntityPage.getContent().isEmpty()) {
@@ -145,7 +182,7 @@ public class SignInServiceImpl implements SignInService, UserDetailsService {
             return;
         }
         for (SignInEntity signInEntity : signInEntityPage.getContent()) {
-            if (signInEntity.getIpAddress().equals(user.getIpAddress())) {
+            if (signInEntity.getIpAddress().equals(signInRequest.getIpAddress())) {
                 signInEntity.setStatus(FORCED_SIGN_OUT.getStatus());
                 update(signInEntity);
                 log.info("[{}]: Existing ip address found in sign in so we are {} it.", signInEntity.getStatus(), customerEntity.getId());
@@ -157,6 +194,8 @@ public class SignInServiceImpl implements SignInService, UserDetailsService {
             return;
         }
         //TODO: error handling
+        log.info("[{}]: User sign reached the max number of session={}", customerEntity.getId(), SignInEntity.MAX_SIGN_SESSION);
+        throw new SignInMaxSessionReachedException("Max Number of session reached", new ArrayList<>(), ErrorCode.MAX_NUMBER_OF_SESSION_REACHED);
     }
 
     private SignInEntity save(SignInEntity signInEntity) {

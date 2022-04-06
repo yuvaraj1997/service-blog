@@ -36,8 +36,9 @@ public class CustomUser extends User {
         this.deviceSubtype = deviceSubtype;
     }
 
-    public CustomUser(SignInRequest signInRequest, String username, String password, Collection<? extends GrantedAuthority> authorities) {
+    public CustomUser(SignInRequest signInRequest, String customerId, String username, String password, Collection<? extends GrantedAuthority> authorities) {
         super(username, password, authorities);
         this.signInRequest = signInRequest;
+        this.customerId = customerId;
     }
 }

@@ -29,6 +29,18 @@ public class ResponseHelper {
         return response;
     }
 
+    public static Object handleGeneralException(Integer statusCode, ErrorCode errorCode, Object additionalProperties) {
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("status", getStatusNodeMapping(statusCode));
+        if (null != errorCode) {
+            response.put("error", getErrorNodeMapping(errorCode));
+        }
+        if (null != additionalProperties) {
+            response.put("additionalProperties", additionalProperties);
+        }
+        return response;
+    }
+
     public static Map<String, Object> handleMethodArgumentNotValidException(Integer statusCode, ErrorCode errorCode, MethodArgumentNotValidException ex) {
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("status", getStatusNodeMapping(statusCode));
