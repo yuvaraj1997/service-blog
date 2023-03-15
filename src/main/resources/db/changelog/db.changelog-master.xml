@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+        xmlns:pro="http://www.liquibase.org/xml/ns/pro"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+		http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd
+		http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd
+		http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd">
+    <changeSet id="20220819" author="Yuvaraj">
+        <createTable tableName="customer_tab">
+            <column name="ct_id" type="varchar(255)">
+                <constraints primaryKey="true" primaryKeyName="ct_id_pk" />
+            </column>
+            <column name="ct_type" type="varchar(45)"/>
+            <column name="ct_subtype" type="varchar(45)"/>
+            <column name="ct_preferred_name" type="varchar(255)"/>
+            <column name="ct_full_name" type="varchar(255)"/>
+            <column name="ct_email" type="varchar(255)"/>
+            <column name="ct_msisdn" type="varchar(50)"/>
+            <column name="ct_customer_created_date" type="DATETIME"/>
+            <column name="ct_authority_id" type="varchar(255)"/>
+            <column name="ct_status" type="varchar(45)"/>
+            <column name="ct_record_create_date" type="DATETIME"/>
+            <column name="ct_record_update_date" type="DATETIME"/>
+        </createTable>
+    </changeSet>
+</databaseChangeLog>

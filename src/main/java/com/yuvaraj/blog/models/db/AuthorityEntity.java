@@ -45,7 +45,7 @@ public class AuthorityEntity implements Serializable {
     @AllArgsConstructor
     public enum Role {
         ROLE_CUSTOMER(1, "ROLE_CUSTOMER"),
-        ROLE_MERCHANT(2, "ROLE_MERCHANT");
+        ROLE_SUPER_ADMIN(2, "ROLE_SUPER_ADMIN");
 
         private final long id;
         private final String role;

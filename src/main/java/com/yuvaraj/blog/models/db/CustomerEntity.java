@@ -48,9 +48,6 @@ public class CustomerEntity implements Serializable {
     @Column(name = "ct_customer_created_date")
     private Date customerCreatedDate;
 
-    @Column(name = "ct_merchant_created_date")
-    private Date merchantCreatedDate;
-
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "ct_authority_id", referencedColumnName = "at_id")
     private AuthorityEntity authorityEntity;
